@@ -1,36 +1,21 @@
 package server
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/azlive/azlive.livestream.disp/config"
+	"bytes"
 	"io"
 	"io/ioutil"
 	"net/http"
 )
 
 func Startpush(w http.ResponseWriter, req *http.Request) {
-	var (
-		BodyInfo config.UrlInfo
-		ResInfo	 config.StartQueryRes
-	)
-
+	traceid := req.Header.Get("X-TraceId")
 	body, _ := ioutil.ReadAll(req.Body)
-	umsh_err := json.Unmarshal([]byte(body), &BodyInfo)
-	fmt.Printf("show the body , Streamid:%+v ",BodyInfo.Streamid)
-	if umsh_err != nil {
-		fmt.Printf("StartPush request Unmarshal error")
-		ResInfo.Dm_error = 10000
-		ResInfo.Error_msg = "failed"
-		ret, _ := json.Marshal(ResInfo)
+	path := "http://127.0.0.1:89/v1/mp/stream/startpublish?appkey=storemanager"
+	ret, err := httpPostJson(path, traceid, body)
+	if err != nil {
 		io.WriteString(w, string(ret))
 	}
-	ResInfo.Dm_error = 200
-	ResInfo.Error_msg = "success"
-	ResInfo.Data.Ip = "127.0.0.1"
-	ResInfo.Data.Port = 9090
-	ResInfo.Data.Hostname = "azLive1"
-	ret, _ := json.Marshal(ResInfo)
+
 	io.WriteString(w, string(ret))
 }
 
@@ -38,27 +23,32 @@ func Startpush(w http.ResponseWriter, req *http.Request) {
 
 
 func Startpull(w http.ResponseWriter, req *http.Request) {
-	var (
-		BodyInfo config.UrlInfo
-		ResInfo	 config.StartQueryRes
-	)
-
+	traceid := req.Header.Get("X-TraceId")
 	body, _ := ioutil.ReadAll(req.Body)
-	umsh_err := json.Unmarshal([]byte(body), &BodyInfo)
-	fmt.Printf("show the body , Streamid:%+v ",BodyInfo.Streamid)
-	if umsh_err != nil {
-		fmt.Printf("StartPull request Unmarshal error")
-		ResInfo.Dm_error = 10000
-		ResInfo.Error_msg = "failed"
-		ret, _ := json.Marshal(ResInfo)
+	path := "http://127.0.0.1:89/v1/mp/stream/startplay?appkey=storemanager"
+	ret, err := httpPostJson(path, traceid, body)
+	if err != nil {
 		io.WriteString(w, string(ret))
 	}
-	ResInfo.Dm_error = 200
-	ResInfo.Error_msg = "success"
-	ResInfo.Data.Ip = "127.0.0.1"
-	ResInfo.Data.Port = 9090
-	ResInfo.Data.Hostname = "azLive1"
-	ret, _ := json.Marshal(ResInfo)
+
 	io.WriteString(w, string(ret))
 
+}
+
+func httpPostJson(path , traceid string, data []byte) ([]byte, error){
+
+	req, err := http.NewRequest("POST", path, bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-TraceId", traceid)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		// handle error
+		return []byte(""), err
+	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	return body, nil
 }
